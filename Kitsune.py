@@ -1,5 +1,6 @@
 from FeatureExtractor import *
 from KitNET.KitNET import KitNET
+from firebase_config import log_anomaly  # Import the Firebase logging function
 
 # MIT License
 #
@@ -24,19 +25,29 @@ from KitNET.KitNET import KitNET
 # SOFTWARE.
 
 class Kitsune:
-    def __init__(self,file_path,limit,max_autoencoder_size=10,FM_grace_period=None,AD_grace_period=10000,learning_rate=0.1,hidden_ratio=0.75,):
-        #init packet feature extractor (AfterImage)
-        self.FE = FE(file_path,limit)
+    def __init__(self, file_path, limit, max_autoencoder_size=10, FM_grace_period=None, AD_grace_period=10000, learning_rate=0.1, hidden_ratio=0.75):
+        # Init packet feature extractor (AfterImage)
+        self.FE = FE(file_path, limit)
 
-        #init Kitnet
-        self.AnomDetector = KitNET(self.FE.get_num_features(),max_autoencoder_size,FM_grace_period,AD_grace_period,learning_rate,hidden_ratio)
+        # Init KitNET
+        self.AnomDetector = KitNET(self.FE.get_num_features(), max_autoencoder_size, FM_grace_period, AD_grace_period, learning_rate, hidden_ratio)
 
     def proc_next_packet(self):
-        # create feature vector
+        # Create feature vector
         x = self.FE.get_next_vector()
         if len(x) == 0:
-            return -1 #Error or no packets left
+            return -1  # Error or no packets left
 
-        # process KitNET
-        return self.AnomDetector.process(x)  # will train during the grace periods, then execute on all the rest.
+        # Process KitNET
+        anomaly_score = self.AnomDetector.process(x)  # Train during grace periods, execute on all the rest.
 
+        # Log the anomaly to Firebase if the anomaly score is above a certain threshold (e.g., 0.7)
+        if anomaly_score > 0.7:  # You can set this threshold according to your needs
+            anomaly_details = {
+                'anomaly_type': 'Anomaly',  # You can classify anomalies further if needed
+                'confidence': round(anomaly_score * 100, 2),  # Convert score to percentage
+                'info': 'Anomaly detected in network traffic'
+            }
+            log_anomaly(anomaly_details)  # Log the anomaly to Firebase
+
+        return anomaly_score
