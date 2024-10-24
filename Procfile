@@ -1,0 +1,1 @@
+worker: python Kitsune.py -i eth0  # or use the PCAP file method if preferred
