@@ -20,7 +20,21 @@ cred = credentials.Certificate({
 })
 
 # Initialize Firebase app with the credentials
-firebase_admin.initialize_app(cred)
+if not firebase_admin._apps:
+    firebase_admin.initialize_app(cred)
 
 # Initialize Firestore
 db = firestore.client()
+
+# Function to log anomalies to Firebase
+def log_anomaly(details):
+    try:
+        db.collection('anomalies').add({
+            'anomaly_type': details['anomaly_type'],
+            'timestamp': details['timestamp'],
+            'confidence': details['confidence'],
+            'info': details['info']
+        })
+        print("Anomaly logged successfully.")
+    except Exception as e:
+        print(f"Error logging anomaly: {e}")
